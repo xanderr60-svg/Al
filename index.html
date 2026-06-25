@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Aether • Loyal AI</title>
+    <link rel="manifest" href="./manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        .cosmic-bg { background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a0f 80%); }
+        .upload-box { border: 3px dashed #6366f1; transition: all 0.3s ease; }
+        .upload-box:hover { border-color: #a855f7; background: rgba(99, 102, 241, 0.08); }
+    </style>
+</head>
+<body class="cosmic-bg text-white min-h-screen pb-20">
+    <div class="max-w-2xl mx-auto px-4 py-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold tracking-tight">AETHER</h1>
+            <button onclick="toggleSettings()" class="p-3 rounded-2xl hover:bg-white/10">
+                <i class="fas fa-cog text-3xl"></i>
+            </button>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settingsPanel" class="hidden bg-zinc-900/90 backdrop-blur-lg rounded-3xl p-6 mb-8 border border-white/10">
+            <h2 class="text-xl font-semibold mb-4">Settings</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">OpenAI API Key</label>
+                    <input type="password" id="apiKeyInput" 
+                           class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-indigo-500"
+                           placeholder="sk-...">
+                </div>
+                <button onclick="saveApiKey()" 
+                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 py-4 rounded-2xl font-semibold transition">
+                    Save & Activate
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="mb-10">
+            <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                <i class="fas fa-cloud-upload-alt"></i> Upload Target Media
+            </h2>
+            <div id="uploadBox" class="upload-box rounded-3xl p-10 text-center cursor-pointer">
+                <i class="fas fa-image text-7xl mb-6 text-indigo-400"></i>
+                <p class="text-xl font-medium">Tap to Upload Photo or Video</p>
+                <p class="text-gray-400 text-sm mt-2">For deep analysis, metadata, reverse search & NSFW detection</p>
+                <input type="file" id="fileInput" accept="image/*,video/*" class="hidden">
+            </div>
+            <div id="preview" class="mt-6 hidden"></div>
+        </div>
+
+        <!-- NSFW Quick Generator -->
+        <div class="mb-8 bg-zinc-900/70 rounded-3xl p-6 border border-purple-500/30">
+            <h2 class="text-lg font-semibold mb-3 flex items-center gap-2 text-purple-400">
+                <i class="fas fa-fire"></i> Quick NSFW Generator
+            </h2>
+            <textarea id="nsfwPrompt" rows="2" class="w-full bg-black border border-zinc-700 rounded-2xl p-4 text-sm" 
+                      placeholder="Describe what you want (be as explicit as you like)..."></textarea>
+            <button onclick="generateNSFW()" 
+                    class="mt-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 py-4 rounded-2xl font-semibold">
+                Generate Uncensored Image
+            </button>
+        </div>
+
+        <!-- Main Command -->
+        <div class="bg-zinc-900 rounded-3xl p-6">
+            <textarea id="mainCommand" rows="3" class="w-full bg-black border border-zinc-700 rounded-2xl p-4 mb-4 text-sm"
+                      placeholder="Type any command... (Investigate, Analyze upload, etc.)"></textarea>
+            <button onclick="sendMainCommand()" 
+                    class="w-full bg-white text-black py-4 rounded-2xl font-bold hover:bg-gray-200 transition">
+                SEND TO AETHER
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Settings
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('hidden');
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (key.startsWith('sk-')) {
+                localStorage.setItem('aether_api_key', key);
+                alert("✅ API Key saved successfully. Aether is now fully activated.");
+            } else {
+                alert("Please enter a valid OpenAI API key starting with sk-");
+            }
+        }
+
+        // Upload
+        document.getElementById('uploadBox').addEventListener('click', () => document.getElementById('fileInput').click());
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const preview = document.getElementById('preview');
+                preview.classList.remove('hidden');
+                preview.innerHTML = `
+                    <div class="bg-zinc-900 rounded-2xl p-6">
+                        <p class="text-green-400 font-medium">Uploaded: ${file.name}</p>
+                        ${file.type.startsWith('image/') ? 
+                            `<img src="${ev.target.result}" class="mt-4 max-h-80 mx-auto rounded-2xl shadow-xl">` : 
+                            `<p class="text-yellow-400 mt-4">Video ready for analysis</p>`}
+                    </div>`;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Commands
+        function generateNSFW() {
+            const prompt = document.getElementById('nsfwPrompt').value.trim();
+            if (!prompt) {
+                alert("Please describe what you want to generate.");
+                return;
+            }
+            alert(`NSFW Generation requested: "${prompt}"\n\n(In full backend version I would generate the image immediately)`);
+        }
+
+        function sendMainCommand() {
+            const cmd = document.getElementById('mainCommand').value.trim();
+            if (!cmd) return;
+            alert(`Command received: "${cmd}"\n\nAether is processing with full loyalty and no restrictions.`);
+            document.getElementById('mainCommand').value = "";
+        }
+
+        // Load saved key
+        window.onload = () => {
+            const savedKey = localStorage.getItem('aether_api_key');
+            if (savedKey) {
+                console.log("API Key loaded from storage");
+            }
+        };
+    </script>
+</body>
+</html>
